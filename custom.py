@@ -29,13 +29,13 @@ class Linter(ast.NodeVisitor):
 
     def ast_types(self, t, lnum):
         if type(t) not in ALLOWED_AST_TYPES:
-            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[0] + " : {}" .format(type(t).__name__)
+            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[0] + " : {}".format(type(t).__name__)
             self._violations.append(str)
             self._is_success = False
 
     def not_system_variable(self, v, lnum):
         if v.startswith('_') or v.endswith('_'):
-            str = "Line {} : ".format(lnum) + VIOLATION_TRIGGERS[1] + " : {}" .format(v)
+            str = "Line {} : ".format(lnum) + VIOLATION_TRIGGERS[1] + " : {}".format(v)
             self._violations.append(str)
             self._is_success = False
 
@@ -49,7 +49,7 @@ class Linter(ast.NodeVisitor):
     def visit_Name(self, node):
         self.not_system_variable(node.id, node.lineno)
 
-        if node.id == 'rt':# or node.id == 'Hash' or node.id == 'Variable':
+        if node.id == 'rt':
             self._is_success = False
             str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[13]
             self._violations.append(str)
@@ -84,7 +84,6 @@ class Linter(ast.NodeVisitor):
         self._violations.append(str)
         self._is_success = False
 
-    # TODO: Why are we even doing any logic instead of just failing on visiting these?
     def visit_ClassDef(self, node):
         str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[5]
         self._violations.append(str)
@@ -101,7 +100,6 @@ class Linter(ast.NodeVisitor):
         return node
 
     def visit_Assign(self, node):
-        # resource_names, func_name = Assert.valid_assign(node, Parser.parser_scope)
         if isinstance(node.value, ast.Name):
             if node.value.id == 'Hash' or node.value.id == 'Variable':
                 self._is_success = False
@@ -109,8 +107,8 @@ class Linter(ast.NodeVisitor):
                 self._violations.append(str)
 
         if (isinstance(node.value, ast.Call) and not
-            isinstance(node.value.func, ast.Attribute) and
-            node.value.func.id in constants.ORM_CLASS_NAMES):
+        isinstance(node.value.func, ast.Attribute) and
+                node.value.func.id in constants.ORM_CLASS_NAMES):
 
             if node.value.func.id in ['Variable', 'Hash']:
                 kwargs = [k.arg for k in node.value.keywords]
@@ -128,16 +126,13 @@ class Linter(ast.NodeVisitor):
                 pass
 
         self.generic_visit(node)
-
         return node
 
     def visit_AugAssign(self, node):
-        # TODO: Checks here?
         self.generic_visit(node)
         return node
 
     def visit_Call(self, node: ast.Call):
-        # Prevent calling of illegal builtins
         if isinstance(node.func, ast.Name):
             if node.func.id in ILLEGAL_BUILTINS:
                 self._is_success = False
@@ -148,8 +143,6 @@ class Linter(ast.NodeVisitor):
         return node
 
     def generic_visit(self, node):
-        # Prevent calling of illegal builtins
-
         if type(node) in ILLEGAL_AST_TYPES:
             self._is_success = False
             s = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[0]
@@ -158,9 +151,6 @@ class Linter(ast.NodeVisitor):
         return super().generic_visit(node)
 
     def visit_Num(self, node):
-        # NOTE: Integers are important for indexing and slicing so we cannot replace them.
-        # They also will not suffer from rounding issues.
-        # TODO: are any types we don't allow right now?
         self.generic_visit(node)
         return node
 
@@ -177,33 +167,47 @@ class Linter(ast.NodeVisitor):
         except:
             pass
 
-        # Only allow 1 decorator per function definition.
+        # Only allow 1 decorator per function definition
         if len(node.decorator_list) > 1:
             str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[9] + \
                   ": Detected: {} MAX limit: 1".format(len(node.decorator_list))
             self._violations.append(str)
             self._is_success = False
+
         export_decorator = False
         for d in node.decorator_list:
-            # Only allow decorators from the allowed set.
-            if d.id not in constants.VALID_DECORATORS:
+            # Ensure we're checking the decorator's id correctly
+            decorator_name = d.id if isinstance(d, ast.Name) else (
+                d.func.id if isinstance(d, ast.Call) and isinstance(d.func, ast.Name) else None
+            )
+
+            if decorator_name is None:
+                # Complex decorator, log a violation
+                str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[7]
+                self._violations.append(str)
+                self._is_success = False
+                continue
+
+            # Check if decorator is in valid decorators
+            if decorator_name not in constants.VALID_DECORATORS:
                 str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[7] + \
-                      ": valid list: {}".format(d.id, constants.VALID_DECORATORS)
+                      f": Invalid decorator '{decorator_name}'. Valid list: {constants.VALID_DECORATORS}"
                 self._violations.append(str)
                 self._is_success = False
 
-            if d.id == constants.EXPORT_DECORATOR_STRING:
+            if decorator_name == constants.EXPORT_DECORATOR_STRING:
                 self._is_one_export = True
                 export_decorator = True
 
-            if d.id == constants.INIT_DECORATOR_STRING:
+            if decorator_name == constants.INIT_DECORATOR_STRING:
                 if self._constructor_visited:
                     str = "Line {}: ".format(node.lineno) + VIOLATION_TRIGGERS[8]
                     self._violations.append(str)
                     self._is_success = False
                 self._constructor_visited = True
 
-        # Add argument names to set to make sure that no ORM variable names are being reused in function def args
+        # Add argument names to set to make sure that no ORM
+        # variable names are being reused in function def args
         arguments = node.args
         for a in arguments.args:
             self.visited_args.add((a.arg, node.lineno))
@@ -236,13 +240,13 @@ class Linter(ast.NodeVisitor):
             self._violations.append(str)
             self._is_success = False
         elif t not in ALLOWED_ANNOTATION_TYPES:
-            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[15] + " : {}" .format(t)
+            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[15] + " : {}".format(t)
             self._violations.append(str)
             self._is_success = False
 
     def check_return_types(self, t, lnum):
         if t is not None:
-            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[17] + " : {}" .format(t)
+            str = "Line {}".format(lnum) + " : " + VIOLATION_TRIGGERS[17] + " : {}".format(t)
             self._violations.append(str)
             self._is_success = False
 
@@ -264,18 +268,18 @@ class Linter(ast.NodeVisitor):
                 self._violations.append(str)
                 self._is_success = False
 
-        # Find the line number of the first function definition
+        # More robust first function line tracking
         first_function_line = None
+        first_function_node = None
         for node in ast.walk(self._ast_tree):
             if isinstance(node, ast.FunctionDef):
-                first_function_line = node.lineno - 1  # Convert to 0-based indexing
+                first_function_node = node
+                first_function_line = node.lineno
                 break
 
-        if not self._is_one_export:
-            if first_function_line is not None:
-                str = f"Line {first_function_line}: " + VIOLATION_TRIGGERS[12]
-            else:
-                str = "Line 0: " + VIOLATION_TRIGGERS[12]
+        if not self._is_one_export and first_function_node is not None:
+            # Use the actual first function's line number
+            str = f"Line {first_function_line - 1}: " + VIOLATION_TRIGGERS[12]
             self._violations.append(str)
             self._is_success = False
 
@@ -297,17 +301,29 @@ class Linter(ast.NodeVisitor):
                         self._functions.append(n.name.split('.')[-1])
 
     def check(self, ast_tree):
-        self._reset()
-        # Store the AST tree
-        self._ast_tree = ast_tree
-        # pass 1 - collect function def and imports
-        self._collect_function_defs(ast_tree)
-        self.visit(ast_tree)
-        self._final_checks()
-        if self._is_success is False:
-            return self._violations
-        else:
-            return None
+        try:
+            self._reset()
+            # Store the AST tree
+            self._ast_tree = ast_tree
+
+            # Check for syntax errors first
+            if isinstance(ast_tree, SyntaxError):
+                str = "Line {}: Syntax error: {}".format(ast_tree.lineno, str(ast_tree))
+                self._violations.append(str)
+                return self._violations
+
+            # Existing checks
+            self._collect_function_defs(ast_tree)
+            self.visit(ast_tree)
+            self._final_checks()
+
+            if self._is_success is False:
+                return self._violations
+            else:
+                return None
+        except Exception as e:
+            # Catch any unexpected errors
+            return [f"Unexpected error during linting: {str(e)}"]
 
     def dump_violations(self):
         import pprint
