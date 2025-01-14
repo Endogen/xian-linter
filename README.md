@@ -38,7 +38,7 @@ Expects base64-encoded Python code in the request body.
 
 ```bash
 # Example using curl
-base64 contract.py > contract.py.b64
+base64 < contract.py > contract.py.b64
 curl -X POST "http://localhost:8000/lint_base64" --data-binary "@contract.py.b64"
 ```
 
