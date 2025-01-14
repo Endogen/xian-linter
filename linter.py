@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from io import StringIO
 from pyflakes.api import check
 from pyflakes.reporter import Reporter
-from contracting.compilation.linter import Linter
+from custom import Linter
 
 
 class Settings:
