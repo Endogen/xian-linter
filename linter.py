@@ -163,16 +163,17 @@ def parse_contracting_line(violation: str) -> LintError:
     if match:
         line_num = int(match.group(1))
         message = match.group(2)
-        # Line 0 means global error
-        if line_num == 0:
-            return LintError(message=message)
+
+        # Use the line number directly
         return LintError(
             message=message,
             position=Position(
-                line=line_num - 1,
+                line=line_num,  # No subtraction
                 column=0
             )
         )
+
+    # Fallback for unmatched violations
     return LintError(message=violation)
 
 
