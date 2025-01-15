@@ -4,6 +4,7 @@ import ast
 import base64
 import gzip
 import re
+
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Optional, List, Set
@@ -25,7 +26,7 @@ class Settings:
             'export', 'construct', 'Hash', 'Variable', 'ctx', 'now',
             'random', 'ForeignHash', 'ForeignVariable', 'block_num',
             'block_hash', 'importlib', 'hashlib', 'datetime', 'crypto',
-            'decimal', 'Any'
+            'decimal', 'Any', 'LogEvent', 'chain_id'
         })
 
 
