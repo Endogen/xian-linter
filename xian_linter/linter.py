@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from io import StringIO
 from pyflakes.api import check
 from pyflakes.reporter import Reporter
-from custom import Linter
+from .custom import Linter
 
 
 class Settings:
@@ -360,5 +360,8 @@ async def lint_gzip(request: Request) -> LintResponse:
         )
 
 
-if __name__ == "__main__":
+def run_server():
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    run_server()
