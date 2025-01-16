@@ -26,7 +26,7 @@ pip install xian-linter
 ### 2. From source
 ```bash
 # Clone the repository
-git clone [repository_url]
+git clone https://github.com/xian-network/xian-linter.git
 cd xian-linter
 
 # Install dependencies using Poetry
